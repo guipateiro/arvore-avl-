@@ -1,18 +1,21 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include<string.h>
 
-typedef struct T_no {
-    int chave;
-    int altura;
-    struct T_no *esq, *dir, *pai;
+typedef struct tno {
+	int chave;
+	struct tno *esq;
+	struct tno *dir;
+    struct tno *pai;
+	int bal;
 } T_no;
 
-void printTree(T_no *n)
-{
-    if(n == NULL) return;
-    printTree(n->esq);
-    printf("%d ", n->chave);
-    printTree(n->dir);
+void imprimelista(T_no* raiz,int i){
+	if(raiz == NULL) 
+		return; 
+	imprimelista(raiz->esq, i+1);
+	printf("%i , %i\n",raiz->chave, i);
+	imprimelista(raiz->dir, i+1);
 }
 
 T_no* criaNodo(int chave)
@@ -22,14 +25,15 @@ T_no* criaNodo(int chave)
     n->esq = NULL;
     n->dir = NULL;
     n->pai = NULL;
-    n->altura = 0;
+    n->bal = 0;
     return n;
 }
+
 
 T_no* insereFolha(T_no *n, int chave)
 {
     if(n == NULL)
-        return criaNodo(chave);
+        n = criaNodo(chave);
 
     if(n->chave > chave){
         n->esq = insereFolha(n->esq, chave);
@@ -42,38 +46,31 @@ T_no* insereFolha(T_no *n, int chave)
     return n;
 }
 
-void rot_esq(T_no *tree, T_no *x)
+//Tive q alterar a função de rotação, pra fazer a rotação no nodo corretamente
+//Por enquanto isso é literalmente uma cópia do Didonet, tem q ver se tem como
+//mudar ou fazer diferente alguma coisa
+T_no *rotNodo_dir(T_no *no)
 {
-    T_no * y = x->dir;
-    x->dir = y->esq;
-    if(y->esq != NULL)
-        y->esq->pai = x;
-    y->pai = x->pai;
-    if(x->pai == NULL)
-        tree = y;
-    else if(x == x->pai->esq)
-        x->pai->esq = y;
-    else 
-        x->pai->dir = y;
-    y->esq = x;
-    x->pai = y;
+    T_no *aux = no->esq;
+    no->esq = aux->dir;
+    aux->pai = no->pai;
+    no->pai = aux;
+    if (aux->dir != NULL)
+        aux->dir->pai = no;
+    aux->dir = no;
+    return aux;
 }
 
-void rot_dir(T_no *tree, T_no *x)
+T_no *rotNodo_esq(T_no *no)
 {
-    T_no * y = x->esq;
-    x->esq = y->dir;
-    if(y->dir != NULL)
-        y->dir->pai = x;
-    y->pai = x->pai;
-    if(x->pai == NULL)
-        tree = y;
-    else if(x == x->pai->esq)
-        x->pai->esq = y;
-    else 
-        x->pai->dir = y;
-    y->dir = x;
-    x->pai = y;
+    T_no *aux = no->dir;
+    no->dir = aux->esq;
+    aux->pai = no->pai;
+    no->pai = aux;
+    if (aux->esq != NULL)
+        aux->esq->pai = no;
+    aux->esq = no;
+    return aux;
 }
 
 int max(int a, int b){
@@ -93,7 +90,7 @@ int altura(T_no * n){
 T_no *antecessor(T_no *n){
     if(n->esq == NULL)
         return n;
-    minimo(n->esq);
+    return antecessor(n->esq);
 }
 
 T_no *sucessor(T_no *n){
@@ -105,45 +102,101 @@ T_no *sucessor(T_no *n){
         }
         return sucessor;
     }
-    return minimo(n->dir);
+    return antecessor(n->dir);
 }
 
-T_no *balanceiaAVL(T_no *no){
-    //caso 1: Esq-Esq
-        // rotação a direita
-    //caso 2: Dir-Dir
-        //rotação a esquerda
-    //caso 3: Dir-Esq
-        //rotacão dir (em no->dir)
-        //rotação esquerda em no
-    //caso 4: Esq-Dir
-        //rotação esquerda (em no->esq)
-        //rotação direita em no
+T_no *balanceiaAVL_esq(T_no *no, int *alterada){
+    if(no->esq != NULL && no->esq->bal > 0) //caso 4: Esq-Dir
+        no->esq = rotNodo_esq(no->esq);
+    T_no *aux = rotNodo_dir(no->dir);//caso 1: Esq-Esq
+
+    if(aux->pai != NULL){
+        if(aux->pai->esq == no)
+            no->pai->esq = aux;
+        else
+            no->pai->dir = aux;
+    }
+
+    aux->bal = 0;
+    aux->esq->bal = altura(no->esq->esq) - altura(no->esq->dir);
+    aux->dir->bal = altura(no->dir->esq) - altura(no->dir->dir);
+    return aux;
 }
 
-T_no *inclui(T_no *no){
-    //Inclui na folha
+T_no *balanceiaAVL_dir(T_no *no, int *alterada){
+    if(no->dir != NULL && no->dir->bal < 0) //caso 3: Dir-Esq
+        no->dir = rotNodo_dir(no->dir);
+    T_no *aux = rotNodo_esq(no->esq);//caso 2: Dir-Dir
     
-    // percorre a árvore do nodo inserido, até raiz:
-        // calcula fator de balanceamento
-        // calcula altura
-        // arruma AVl
+    if(aux->pai != NULL){
+        if(aux->pai->esq == no)
+            no->pai->esq = aux;
+        else
+            no->pai->dir = aux;
+    }
+    
+    aux->bal = 0;
+    aux->esq->bal = altura(no->esq->esq) - altura(no->esq->dir);
+    aux->dir->bal = altura(no->dir->esq) - altura(no->dir->dir);
+    return aux;
 }
 
-//links uteis: https://github.com/Ekan5h/AVLtree
-//https://www.cs.usfca.edu/~galles/visualization/AVLtree.html
+T_no* insere(T_no *n, int chave, int *alterada)
+{
+    if(n == NULL){
+        n = criaNodo(chave);
+        *alterada = 1;
+    }
+    //Realiza a inserção
+    if(n->chave > chave){
+        n->esq = insere(n->esq, chave, alterada);
+        n->esq->pai = n;
+        if(*alterada)
+            n->bal -= 1;
+            
+        //Faz o balanceamento Esquerda
+        if(n->bal == 0)
+            *alterada = 0;
+        else if (n->bal == -2){
+            balanceiaAVL_esq(n, alterada);
+            alterada = 0;
+        }
+    }
+    else if(n->chave <= chave){
+        n->dir = insere(n->dir, chave, alterada);
+        n->dir->pai = n;
+        if(*alterada) //se a estrura da subarvore foi alterada
+            n->bal += 1;
+
+        //Faz o balanceamento Direita
+        if(n->bal == 0)
+            *alterada = 0;
+        else if (n->bal == 2){
+            balanceiaAVL_dir(n, alterada);
+            alterada = 0;
+        }
+    }
+    return n;
+}
 
 int main()
 {
-    T_no *arv2;
-    
-    arv2 = malloc(sizeof(T_no));
-    arv2->esq = NULL;
-    arv2->dir = NULL;
-    arv2->chave = 40;
-   
-    for(int i = 0; i < 10; i++)
-        insereFolha(arv2, rand()%100);
-
+    T_no *arv;
+    char op[1];
+    int chave;
+    if(scanf("%s %d", op, &chave) != 2){
+        fprintf(stderr,"Entrada inválida");
+        exit(1);
+    }
+    arv = criaNodo(chave);
+    //lê entrada    
+    while(scanf("%s %d", op, &chave) == 2 && !feof(stdin)){
+        if(!strcmp(op, "i")){
+            printf("Inclui: %d\n", chave);
+            insere(arv, chave, 0);
+            printf("\ninserido\n");
+        }
+    }
+    imprimelista(arv, 0);
     return 0;
 }
