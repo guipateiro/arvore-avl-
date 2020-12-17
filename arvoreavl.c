@@ -1,31 +1,35 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include"avl.h"
 
-typedef struct tno {
-	int chave;
-	struct tno *esq;
-	struct tno *dir;
-	struct tno *pai;
-	int bal; // fator de balanceamento (0, -1 ou +1) => alt. direita - alt. esquerda
-} T_no;
-
-T_no* criano (int c){
-	T_no *novo = (T_no* )malloc(sizeof(T_no));
-	if (!novo)
-		exit (1);
-	novo->esq = NULL;
-	novo->dir = NULL;
-	novo->pai = NULL;
-	novo->chave = c;
-	novo->bal = 0;
-	printf("inserido com sucesso %i na arvore \n", c);
-	return novo; 
+/*****************************************************************/
+/*                                                               */
+/*                     FUNÇÕES BÁSICAS                           */
+/*                                                               */
+/*****************************************************************/
+void imprimelista(T_no* raiz,int i){
+	if(raiz == NULL) 
+		return; 
+	imprimelista(raiz->esq, i+1);
+	printf("%i,%i\n",raiz->chave, i);
+	imprimelista(raiz->dir, i+1);
 }
 
 int max(int a, int b){
-	if (a>b)
-		return a;
-	return b;
+    if(a > b)
+        return a;
+    return b;
+}
+
+T_no* criaNodo(int chave)
+{
+    T_no *n = malloc(sizeof(T_no));
+    if (!n)
+        exit(1);
+    n->chave = chave;
+    n->esq = NULL;
+    n->dir = NULL;
+    n->pai = NULL;
+    n->bal = 0;
+    return n;
 }
 
 int altura (T_no* no){
@@ -35,46 +39,33 @@ int altura (T_no* no){
 		return 1 + max(altura(no->esq),altura(no->dir));
 }
 
-void imprimelista(T_no* raiz,int k){
-	if(raiz == NULL) 
-		return; 
-	imprimelista(raiz->esq, k+1);
-	printf("%i , %i\n",raiz->chave, k);
-	imprimelista(raiz->dir, k+1);
-}
-
-void insereno(T_no** raiz, int c){
-	T_no* novo = *raiz;
-	if(novo == NULL){
-		*raiz = criano(c);		
-	}
-	else{
-		if (c <= novo->chave)
-			insereno(&novo->esq,c);
-		else
-			insereno(&novo->dir,c);
-	}
-}
-
-T_no *min(T_no *n){
+T_no *antecessor(T_no *n){
     if(n->esq == NULL)
         return n;
-    return min(n->esq);
+    return antecessor(n->esq);
 }
 
 T_no *sucessor(T_no *n){
-    if(n->dir != NULL) 
-    	return min(n->dir);
-    T_no *sucessor = n->pai;
-    while (sucessor != NULL && sucessor->dir == n){
-        n = sucessor;
-        sucessor = sucessor->pai;
+    if(n->dir == NULL){ 
+        T_no *sucessor = n->pai;
+        while (sucessor->pai != NULL && sucessor->dir == n){
+            n = sucessor;
+            sucessor = n->pai;
+        }
+        return sucessor;
     }
-    return sucessor;
+    return antecessor(n->dir);
 }
 
-T_no *rotNodo_dir(T_no *no)
-{
+/*****************************************************************/
+/*                                                               */
+/*                     FUNÇÕES ROTAÇÃO                           */
+/*                                                               */
+/*****************************************************************/
+//Tive q alterar a função de rotação, pra fazer a rotação no nodo corretamente
+//Por enquanto isso é literalmente uma cópia do Didonet, tem q ver se tem como
+//mudar ou fazer diferente alguma coisa
+T_no *rotNodo_dir(T_no *no){
     T_no *aux = no->esq;
     no->esq = aux->dir;
     aux->pai = no->pai;
@@ -85,8 +76,7 @@ T_no *rotNodo_dir(T_no *no)
     return aux;
 }
 
-T_no *rotNodo_esq(T_no *no)
-{
+T_no *rotNodo_esq(T_no *no){
     T_no *aux = no->dir;
     no->dir = aux->esq;
     aux->pai = no->pai;
@@ -97,94 +87,193 @@ T_no *rotNodo_esq(T_no *no)
     return aux;
 }
 
-/* exclui a chave com valor igual a ch   */
-int excluirAVL(T_no** raiz, int ch, int* alterou){
-	T_no* atual = *raiz;
-  	if (!atual) {
-    	*alterou = 0;
-    	return 0;
-  	}
-  	if (atual->chave == ch){
-    	T_no* substituto;
-    	if(!atual->esq || !atual->dir) { // tem zero ou um filho
-      		if(atual->esq) {
-      			substituto = atual->esq;
-      		}	
-      		else{ 
-      			substituto = atual->dir;
-      		}	
-      		*raiz = substituto;
-      		free(atual);
-      		*alterou = 1;
-      		return 1;
-    	}
-    	else{   // tem dois filhos
-      		substituto = sucessor(atual);
-      		atual->chave = substituto->chave;
-      		ch = substituto->chave; // continua o codigo excluindo o substituto
-    	}
-  	}
-  	int res;
-  	if (ch < atual->chave){
-    	res = excluirAVL(&(atual->esq), ch, alterou);
-    	if (*alterou){
-     	    switch (atual->bal){
-        		case -1: 
-        			atual->bal = 0;
-            		return 1;
-            	case 0: 
-            		atual->bal = 1;
-            		*alterou = 0;
-            		return 1;
-            	case 1:
-            	    *raiz = rotNodo_dir(atual);
-            		if (atual->bal != 0){
-            			*alterou = 0;
-            		}
-        			return 1;
-        	}
-    	}
-    }	
-  	else{
-    	res = excluirAVL(&(atual->dir), ch, alterou);
-    	if (*alterou){
-    	    switch (atual->bal){
-        		case 1: 
-        			atual->bal = 0;
-        	    	return 1;
-        		case 0: 
-        			atual->bal = -1;
-         			*alterou = 1;
-            		return 1;
-          		case -1: 
-          			*raiz = rotNodo_esq(atual);
-          			if (atual->bal != 0)
-          				 *alterou = 0;
-          			return 1;
-       		}
-    	}
-  	}
-  	return res;
+/*****************************************************************/
+/*                                                               */
+/*                     BALANCEAMENTO                             */
+/*                                                               */
+/*****************************************************************/
+void arrumaBal(T_no *no, T_no *aux){
+    if(aux->pai != NULL){
+        if(aux->pai->esq == no)
+            aux->pai->esq = aux;
+        else
+            aux->pai->dir = aux;
+    }
+    
+    aux->bal = 0;
+    aux->esq->bal = altura(aux->esq->esq) - altura(aux->esq->dir);
+    aux->dir->bal = altura(aux->dir->dir) - altura(aux->dir->esq);
 }
 
-int main(){
-	T_no *arvore = NULL;
-	int i; 
-	int j = 0;
-	char codigo;
-	while (i >= -1){
-		scanf("%s",&codigo);
-		if (codigo == 'i'){
-			scanf("%i",&i);
-			insereno(&arvore,i);
-		}
-		if (codigo == 'p')
-			imprimelista(arvore,0);
-		if (codigo == 'r'){
-			scanf("%i",&i);
-			excluirAVL(&arvore,i,&j);
-			j = 0;
-		}
-	}
-	return 0;
-}	
+T_no *balanceiaAVL_esq(T_no *no, int *alterada){
+    if(no->esq != NULL && no->esq->bal > 0) {
+        //caso 4: Esq-Dir
+        no->esq = rotNodo_esq(no->esq);
+    }
+    //caso 1: Esq-Esq
+    T_no *aux = rotNodo_dir(no);
+
+    arrumaBal(no, aux);  
+
+    return aux;
+}
+
+T_no *balanceiaAVL_dir(T_no *no, int *alterada){
+    if(no->dir != NULL && no->dir->bal < 0){
+        //caso 3: Dir-Esq
+        no->dir = rotNodo_dir(no->dir);
+    }         
+    //caso 2: Dir-Dir
+    T_no *aux = rotNodo_esq(no);
+
+    arrumaBal(no, aux);    
+    
+    return aux;
+}
+
+/*****************************************************************/
+/*                                                               */
+/*                     INSERE                                    */
+/*                                                               */
+/*****************************************************************/
+T_no* insere(T_no *n, int chave, int *alterada)
+{
+    if(n == NULL){
+        n = criaNodo(chave);
+        *alterada = 1;
+        return n;
+    }
+    //Realiza a inserção
+    if(n->chave > chave){
+        n->esq = insere(n->esq, chave, alterada);
+        n->esq->pai = n;
+        if(*alterada)
+            n->bal -= 1;
+            
+        //Faz o balanceamento Esquerda
+        if(n->bal == 0)
+            *alterada = 0;
+        else if (n->bal == -2){
+            n = balanceiaAVL_esq(n, alterada);
+            *alterada = 0;
+        }
+    }
+    else if(n->chave <= chave){
+        n->dir = insere(n->dir, chave, alterada);
+        n->dir->pai = n;
+        //se a estrura da subarvore foi alterada
+        if(*alterada) 
+            n->bal += 1;
+
+        //Faz o balanceamento Direita
+        if(n->bal == 0)
+            *alterada = 0;
+        else if (n->bal == 2){
+            n = balanceiaAVL_dir(n, alterada);
+            *alterada = 0;
+        }
+    }
+    return n;
+}
+
+/*****************************************************************/
+/*                                                               */
+/*                     REMOVE                                    */
+/*                                                               */
+/*****************************************************************/
+int excluino(T_no** raiz, int ch, int* alterou){
+    T_no* atual = *raiz;
+    if (!atual) {
+        *alterou = 0;
+        return 0;
+    }
+    if (atual->chave == ch){
+        T_no* substituto;
+        if(!atual->esq || !atual->dir) { // tem zero ou um filho
+            if(atual->esq) {
+                substituto = atual->esq;
+            }   
+            else{ 
+                substituto = atual->dir;
+            }   
+            *raiz = substituto;
+            free(atual);
+            *alterou = 1;
+            return 1;
+        }
+        else{   // tem dois filhos
+            substituto = sucessor(atual);
+            atual->chave = substituto->chave;
+            ch = substituto->chave; // continua o codigo excluindo o substituto
+        }
+    }
+    int res;
+    if (ch < atual->chave){
+        //recursao a esquerda
+        res = excluino(&(atual->esq), ch, alterou); 
+        if (*alterou){ // rebalanceia a arvore 
+            switch (atual->bal){
+                case -1: 
+                    atual->bal = 0;
+                    return 1;
+                case 0: 
+                    atual->bal = 1;
+                    *alterou = 0;
+                    return 1;
+                case 1:
+                    *raiz = balanceiaAVL_dir(atual,alterou);
+                    if (atual->bal != 0){
+                        *alterou = 0;
+                    }
+                    return 1;
+            }
+        }
+    }   
+    else{
+        //recursao a direita 
+        res = excluino(&(atual->dir), ch, alterou);
+        if (*alterou){ // rebalanceia a arvore 
+            switch (atual->bal){
+                case 1: 
+                    atual->bal = 0;
+                    return 1;
+                case 0: 
+                    atual->bal = -1;
+                    *alterou = 1;
+                    return 1;
+                case -1: 
+                    *raiz = balanceiaAVL_esq(atual, alterou);
+                    if (atual->bal != 0)
+                         *alterou = 0;
+                    return 1;
+            }
+        }
+    }
+    return res;
+}
+
+T_no *criaArvore()
+{
+    T_no *arv;
+    char op[1];
+    int chave;
+    if(scanf("%s %d", op, &chave) != 2){
+        fprintf(stderr,"Entrada inválida");
+        exit(1);
+    }
+    arv = criaNodo(chave);
+    int altera = 0;
+    //lê entrada    
+    while(scanf("%s %d", op, &chave) == 2 && !feof(stdin)){
+        if(!strcmp(op, "i")){
+            altera = 0;
+            arv = insere(arv, chave, &altera);
+        }
+        if(!strcmp(op, "r")){
+            altera = 0;
+            excluino(&arv, chave, &altera);
+        }
+    }
+    
+    return arv;
+}
