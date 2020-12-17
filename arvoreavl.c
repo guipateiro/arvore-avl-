@@ -212,41 +212,30 @@ int excluino(T_no** raiz, int ch, int* alterou){
         //recursao a esquerda
         res = excluino(&(atual->esq), ch, alterou); 
         if (*alterou){ // rebalanceia a arvore 
-            switch (atual->bal){
-                case -1: 
-                    atual->bal = 0;
-                    return 1;
-                case 0: 
-                    atual->bal = 1;
+            atual->bal++;
+            if (atual->bal == 1)
+            	*alterou = 0;
+            else if (atual->bal == 2){
+            	*raiz = balanceiaAVL_dir(atual,alterou);
+                if (atual->bal != 0)
                     *alterou = 0;
-                    return 1;
-                case 1:
-                    *raiz = balanceiaAVL_dir(atual,alterou);
-                    if (atual->bal != 0){
-                        *alterou = 0;
-                    }
-                    return 1;
             }
+            return 1;
         }
     }   
     else{
         //recursao a direita 
         res = excluino(&(atual->dir), ch, alterou);
         if (*alterou){ // rebalanceia a arvore 
-            switch (atual->bal){
-                case 1: 
-                    atual->bal = 0;
-                    return 1;
-                case 0: 
-                    atual->bal = -1;
-                    *alterou = 1;
-                    return 1;
-                case -1: 
-                    *raiz = balanceiaAVL_esq(atual, alterou);
-                    if (atual->bal != 0)
-                         *alterou = 0;
-                    return 1;
+            atual->bal--;
+            if (atual->bal == -1)
+            	*alterou = 1;
+            else if (atual->bal == -2){
+            	*raiz = balanceiaAVL_esq(atual, alterou);
+                if (atual->bal != 0)
+                    *alterou = 0;
             }
+            return 1;
         }
     }
     return res;
