@@ -4,7 +4,7 @@ LDFLAGS = -lm
 all: avl 
 
 avl: main.o arvoreavl.o
-	gcc -o myavl main.o arvoreavl.o $(CFLAGS) $(LDFLAGS)
+	gcc -o myavl main.o arvoreavl.o $(CFLAGS) $(LDFLAGS) -g
 
 main.o: main.c arvoreavl.h
 	gcc -c main.c $(CFLAGS)

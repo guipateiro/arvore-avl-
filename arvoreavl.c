@@ -1,4 +1,4 @@
-#include"avl.h"
+#include"arvoreavl.h"
 
 /*****************************************************************/
 /*                                                               */
@@ -62,9 +62,7 @@ T_no *sucessor(T_no *n){
 /*                     FUNÇÕES ROTAÇÃO                           */
 /*                                                               */
 /*****************************************************************/
-//Tive q alterar a função de rotação, pra fazer a rotação no nodo corretamente
-//Por enquanto isso é literalmente uma cópia do Didonet, tem q ver se tem como
-//mudar ou fazer diferente alguma coisa
+
 T_no *rotNodo_dir(T_no *no){
     T_no *aux = no->esq;
     no->esq = aux->dir;
@@ -93,13 +91,14 @@ T_no *rotNodo_esq(T_no *no){
 /*                                                               */
 /*****************************************************************/
 void arrumaBal(T_no *no, T_no *aux){
+    //Arruma ponteiro do pai
     if(aux->pai != NULL){
         if(aux->pai->esq == no)
             aux->pai->esq = aux;
         else
             aux->pai->dir = aux;
     }
-    
+    //Arruma valor balanceamento
     aux->bal = 0;
     aux->esq->bal = altura(aux->esq->esq) - altura(aux->esq->dir);
     aux->dir->bal = altura(aux->dir->dir) - altura(aux->dir->esq);
@@ -107,7 +106,7 @@ void arrumaBal(T_no *no, T_no *aux){
 
 T_no *balanceiaAVL_esq(T_no *no, int *alterada){
     if(no->esq != NULL && no->esq->bal > 0) {
-        //caso 4: Esq-Dir
+        //caso 2: Esq-Dir
         no->esq = rotNodo_esq(no->esq);
     }
     //caso 1: Esq-Esq
@@ -120,10 +119,10 @@ T_no *balanceiaAVL_esq(T_no *no, int *alterada){
 
 T_no *balanceiaAVL_dir(T_no *no, int *alterada){
     if(no->dir != NULL && no->dir->bal < 0){
-        //caso 3: Dir-Esq
+        //caso 4: Dir-Esq
         no->dir = rotNodo_dir(no->dir);
     }         
-    //caso 2: Dir-Dir
+    //caso 3: Dir-Dir
     T_no *aux = rotNodo_esq(no);
 
     arrumaBal(no, aux);    
@@ -136,29 +135,39 @@ T_no *balanceiaAVL_dir(T_no *no, int *alterada){
 /*                     INSERE                                    */
 /*                                                               */
 /*****************************************************************/
+
+/*
+* Insere chave na arvore (ou subarvore) n
+* Variável "altera" deve começar em 0, e é setada para 1
+* se a subarvore foi alterada, ou seja, se o nodo foi adicionado
+*/
 T_no* insere(T_no *n, int chave, int *alterada)
 {
     if(n == NULL){
+        //cria nodo e seta o valor de "alterada"
+        //sinalizando que a suarvore foi alterada
         n = criaNodo(chave);
         *alterada = 1;
         return n;
     }
     //Realiza a inserção
-    if(n->chave > chave){
+    if(chave < n->chave){
         n->esq = insere(n->esq, chave, alterada);
         n->esq->pai = n;
         if(*alterada)
             n->bal -= 1;
-            
         //Faz o balanceamento Esquerda
-        if(n->bal == 0)
-            *alterada = 0;
+        if(n->bal == 0) *alterada = 0; // se a subarvore esta balanceada
+        //caso contrário, verifica o fator de balanceamento
         else if (n->bal == -2){
+            //se a suarvore esta desbalanceada
+            //n recebe a raiz da subarvore após balanceamento
             n = balanceiaAVL_esq(n, alterada);
             *alterada = 0;
         }
     }
-    else if(n->chave <= chave){
+    //o processo para a inserção na direita é o "espelho" do da esquerda
+    else if(chave >= n->chave){
         n->dir = insere(n->dir, chave, alterada);
         n->dir->pai = n;
         //se a estrura da subarvore foi alterada
@@ -166,8 +175,7 @@ T_no* insere(T_no *n, int chave, int *alterada)
             n->bal += 1;
 
         //Faz o balanceamento Direita
-        if(n->bal == 0)
-            *alterada = 0;
+        if(n->bal == 0) *alterada = 0;
         else if (n->bal == 2){
             n = balanceiaAVL_dir(n, alterada);
             *alterada = 0;
